@@ -1,0 +1,102 @@
+services:
+  remote-gui:
+    image: anylogco/remote-gui:1.1.0
+    container_name: remote-gui
+    hostname: remote-gui
+    restart: always
+    stdin_open: true
+    tty: true
+    ports:
+      - 31800:31800
+      - 8080:8080
+    environment:
+      - VITE_API_URL=http://127.0.0.1:8080
+      - REMOTE_GUI_FE=31800
+      - REMOTE_GUI_BE=8080
+      - REMOTE_CONN=127.0.0.1:32149
+    volumes:
+      - image-vol:/app/CLI/local-cli-backend/static/
+      - usr-mgm-vol:/app/CLI/local-cli/backend/usr-mgm/
+      - report-configs:/app/CLI/local-cli-backend/plugins/reportgenerator/templates
+  anylog-standalone-operator-init:1.4.2604
+      image: busybox
+    user: root
+    group_add:
+      - 1
+    restart: "no"
+    command: [
+      "sh", "-c",
+      "chown -R 10001:10001
+        /app/AnyLog-Network/anylog
+        /app/AnyLog-Network/blockchain
+        /app/AnyLog-Network/data
+        /app/deployment-scripts
+      "
+    ]
+    volumes:
+      - image-vol:/app/CLI/local-cli-backend/static/
+      - usr-mgm-vol:/app/CLI/local-cli/backend/usr-mgm/
+      - anylog-standalone-operator-anylog:/app/AnyLog-Network/anylog
+      - anylog-standalone-operator-blockchain:/app/AnyLog-Network/blockchain
+      - anylog-standalone-operator-data:/app/AnyLog-Network/data
+      - anylog-standalone-operator-local-scripts:/app/deployment-scripts
+  anylog-standalone-operator:
+    image: anylogco/anylog-network:
+    user: "anylog:anylog"
+    # pid: "host"
+    group_add:
+      - 1
+    platform: linux/arm64
+    restart: always
+    env_file:
+      - ../../docker-makefiles/anylog-standalone-operator/node_configs.env
+    container_name: anylog-standalone-operator
+    stdin_open: true
+    tty: true
+    ports:
+      - ${ANYLOG_SERVER_PORT}:${ANYLOG_SERVER_PORT}
+      - ${ANYLOG_REST_PORT}:${ANYLOG_REST_PORT}
+      - ${ANYLOG_BROKER_PORT}:${ANYLOG_BROKER_PORT}
+    depends_on:
+      anylog-standalone-operator-init:
+        condition: service_completed_successfully
+    volumes:
+      - anylog-standalone-operator-anylog:/app/AnyLog-Network/anylog
+      - anylog-standalone-operator-blockchain:/app/AnyLog-Network/blockchain
+      - anylog-standalone-operator-data:/app/AnyLog-Network/data
+      - anylog-standalone-operator-local-scripts:/app/deployment-scripts
+
+  #anylog-operator:
+  #  image: anylogco/anylog-network:1.4.2604
+  #  user: "anylog:anylog"
+  #  # pid: "host"
+  #  group_add:
+  #    - 1
+  #  platform: linux/arm64
+  #  restart: always
+  #  env_file:
+  #    - ../../docker-makefiles/anylog-operator/node_configs.env
+  # container_name: anylog-operator
+  #  stdin_open: true
+  #  tty: true
+  #  ports:
+  #    - ${ANYLOG_SERVER_PORT}:${ANYLOG_SERVER_PORT}
+  #    - ${ANYLOG_REST_PORT}:${ANYLOG_REST_PORT}
+  #    - ${ANYLOG_BROKER_PORT}:${ANYLOG_BROKER_PORT}
+  #  depends_on:
+  #    anylog-standalone-operator-init:
+  #      condition: service_completed_successfully
+  #  volumes:
+  #    - anylog-standalone-operator-anylog:/app/AnyLog-Network/anylog
+  #    - anylog-standalone-operator-blockchain:/app/AnyLog-Network/blockchain
+  #    - anylog-standalone-operator-data:/app/AnyLog-Network/data
+  #    - anylog-standalone-operator-local-scripts:/app/deployment-scripts
+  
+volumes:
+  anylog-standalone-operator-anylog:
+  anylog-standalone-operator-blockchain:
+  anylog-standalone-operator-data:
+  anylog-standalone-operator-local-scripts:
+  image-vol:
+  usr-mgm-vol:
+  report-configs:
